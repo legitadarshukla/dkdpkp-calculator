@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1E6A3B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>DKDPKP Field Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column, two tabs (Calculator, Saved). Big touch targets, results sit directly under their inputs */
+:root{
+  color-scheme:light;
+  --bg:#EDF1EA; --surface:#FFFFFF; --field:#F6F9F4; --ink:#13201A; --muted:#566559;
+  --line:#C9D4C6; --accent:#1E6A3B; --accent-ink:#FFFFFF; --gold-bg:#FFEFC2; --good:#14733A; --bad:#B3261E;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1611; --surface:#16211A; --field:#101A13; --ink:#E6EFE8; --muted:#9AAE9F;
+    --line:#2B3B30; --accent:#58C687; --accent-ink:#06210F; --gold-bg:#2E2610; --good:#6EDB9A; --bad:#FF8A80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1611; --surface:#16211A; --field:#101A13; --ink:#E6EFE8; --muted:#9AAE9F;
+  --line:#2B3B30; --accent:#58C687; --accent-ink:#06210F; --gold-bg:#2E2610; --good:#6EDB9A; --bad:#FF8A80;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg); color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Gujarati","Noto Sans Devanagari",sans-serif;
+  margin:0; padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:16px}
+.view{display:grid;gap:16px}
+h1{font-size:25px;line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tab{height:44px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.bar{display:flex;gap:8px;justify-content:flex-end}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:14px;min-width:0}
+.card h2{margin:0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+label,.lbl{font-size:14px;font-weight:600;display:block;margin-bottom:6px}
+input,select{
+  width:100%;min-width:0;height:52px;font:inherit;font-size:20px;font-variant-numeric:tabular-nums;
+  color:var(--ink);background:var(--field);border:2px solid var(--line);border-radius:10px;padding:0 12px;
+}
+input[type="text"]{font-size:18px}
+select{font-size:17px}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hero{display:grid;gap:2px}
+.hero .big{font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;overflow-wrap:anywhere}
+.hero .unit{color:var(--muted);font-size:14px}
+.stat{display:flex;justify-content:space-between;gap:12px;font-size:15px;color:var(--muted)}
+.stat b{color:var(--ink);font-variant-numeric:tabular-nums}
+.cap{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin:0 0 6px}
+.triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.triple div,.rec-s div{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.k{display:block;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.v{display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.add{display:flex;gap:8px}
+.btn{height:52px;padding:0 18px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:17px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.sm{height:40px;font-size:14px;padding:0 12px}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.bags{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.bags li{display:grid;grid-template-columns:3em minmax(0,1fr) minmax(0,1fr) 44px;align-items:center;gap:8px;padding:2px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.bags li.hd{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--line);padding-bottom:4px}
+.bags .run{font-weight:700;text-align:right}
+.rm{width:44px;height:44px;border:0;background:transparent;color:var(--bad);font-size:26px;line-height:1;cursor:pointer;border-radius:8px}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.total .big{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--muted);margin:0}
+.warn{font-size:14px;color:var(--bad);margin:0;font-weight:600}
+.cmp{display:grid;gap:10px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--field)}
+.cmp-l{font-weight:700;grid-column:1;grid-row:1}
+.cmp-l small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.cmp-w{grid-column:1;grid-row:2;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.cmp-i{grid-column:2;grid-row:1/3;align-self:center;text-align:right;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.cmp-row.gain{background:var(--gold-bg);border-color:transparent}
+.cmp-row.gain .cmp-i{color:var(--good);font-size:28px}
+.cmp-row.gain .cmp-i.neg{color:var(--bad)}
+details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;background:var(--surface)}
+summary{cursor:pointer;font-weight:700;font-size:14px}
+details .grid2,details .full{margin-top:12px}
+.foot{font-size:13px;color:var(--muted);margin:0}
+.rec{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-width:0}
+.rec-h{display:flex;justify-content:space-between;gap:4px 8px;align-items:baseline;flex-wrap:wrap}
+.rec-t{font-weight:700;font-size:17px;overflow-wrap:anywhere}
+.rec-d{color:var(--muted);font-size:13px}
+.rec-s{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.rec-s .v{font-size:17px}
+.recs{display:grid;gap:10px}
+.empty{color:var(--muted);margin:0}
+.link{font-size:14px;font-weight:600;color:var(--accent);align-self:center}
+textarea.csv{width:100%;min-height:140px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--ink);background:var(--field);border:2px solid var(--line);border-radius:10px;padding:8px}
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>DKDPKP Field Calculator</h1>
+    <p class="sub">10 × 10 plot scaled ×40 to one acre. Weights in kg.</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab" role="tab" id="tab-calc" data-view="calc" aria-selected="true">Calculator</button>
+    <button type="button" class="tab" role="tab" id="tab-saved" data-view="saved" aria-selected="false">Saved (<span id="cnt">0</span>)</button>
+  </div>
+
+  <div class="view" id="view-calc">
+    <div class="bar">
+      <button type="button" class="btn ghost sm" id="example">Load example</button>
+      <button type="button" class="btn ghost sm" id="clear">Clear all</button>
+    </div>
+
+    <section class="card" aria-labelledby="h-loc">
+      <h2 id="h-loc">Plot details</h2>
+      <div><label for="village">Village</label><input id="village" type="text" maxlength="80" placeholder="e.g. Dahod" autocomplete="off"></div>
+      <div><label for="label">Farmer name (optional)</label><input id="label" type="text" maxlength="80" placeholder="e.g. Ramesh Patel" autocomplete="off"></div>
+      <button type="button" class="btn" id="loc">Capture location</button>
+      <div class="grid2">
+        <div><label for="lat">Latitude</label><input id="lat" type="number" inputmode="decimal" step="any" placeholder="0.000000"></div>
+        <div><label for="lon">Longitude</label><input id="lon" type="number" inputmode="decimal" step="any" placeholder="0.000000"></div>
+      </div>
+      <p class="note" id="loc-msg" role="status"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-pop">
+      <h2 id="h-pop">Plant population</h2>
+      <div class="grid2">
+        <div><label for="ppr">Plants per row</label><input id="ppr" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+        <div><label for="rows">Number of rows</label><input id="rows" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+      </div>
+      <div class="hero">
+        <span class="unit">Plants per acre (plot count × 40)</span>
+        <span class="big" id="plants-acre">—</span>
+      </div>
+      <div class="stat"><span>Plants in the plot</span><b id="plants-plot">—</b></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-cob">
+      <h2 id="h-cob">Total weight before threshing (corn with cob)</h2>
+      <div>
+        <label for="cob-in">Add a weight (kg)</label>
+        <div class="add">
+          <input id="cob-in" type="number" inputmode="decimal" min="0" step="any" placeholder="kg">
+          <button type="button" class="btn" id="cob-add" aria-label="Add cob weight">+ Add</button>
+        </div>
+      </div>
+      <ul class="bags" id="cob-list"></ul>
+      <div class="total"><span class="lbl" style="margin:0">Plot total</span><span class="big" id="cob-plot">—</span></div>
+      <div>
+        <p class="cap">Per acre (plot × 40)</p>
+        <div class="triple" data-id="cob-a"></div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-grain">
+      <h2 id="h-grain">Grain weight after threshing</h2>
+      <div>
+        <label for="grain-in">Add a bag weight (kg)</label>
+        <div class="add">
+          <input id="grain-in" type="number" inputmode="decimal" min="0" step="any" placeholder="kg">
+          <button type="button" class="btn" id="grain-add" aria-label="Add grain bag weight">+ Add</button>
+        </div>
+      </div>
+      <ul class="bags" id="grain-list"></ul>
+      <div class="total"><span class="lbl" style="margin:0">Plot total</span><span class="big" id="grain-plot">—</span></div>
+      <div>
+        <p class="cap">Per acre (plot × 40)</p>
+        <div class="triple" data-id="grain-a"></div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-shell">
+      <h2 id="h-shell">Shelling percentage</h2>
+      <div class="hero">
+        <span class="unit">Grain weight ÷ total weight with cob</span>
+        <span class="big" id="shelling">—</span>
+      </div>
+      <p class="warn" id="shell-warn" hidden>Grain weight is more than the cob weight. Check the entries.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-inc">
+      <h2 id="h-inc">Income comparison per acre</h2>
+      <div>
+        <label for="moist">Current moisture % (agreed at the meeting)</label>
+        <input id="moist" type="number" inputmode="decimal" min="0" max="99" step="any" placeholder="e.g. 25">
+      </div>
+      <div>
+        <p class="cap">Grain per acre at <span class="stdlbl">14</span>% moisture</p>
+        <div class="triple" data-id="adj"></div>
+        <p class="note" id="adj-note" style="margin-top:6px"></p>
+      </div>
+      <div class="grid2">
+        <div><label for="price">Price</label><input id="price" type="number" inputmode="decimal" min="0" step="any" placeholder="₹"></div>
+        <div>
+          <label for="unit">Per</label>
+          <select id="unit">
+            <option value="kg">kg</option>
+            <option value="qtl">Quintal</option>
+            <option value="mann">Mann</option>
+          </select>
+        </div>
+      </div>
+      <p class="note" id="price-note"></p>
+      <div>
+        <label for="baseline">Average yield without Advanta (quintal per acre)</label>
+        <input id="baseline" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 5">
+      </div>
+
+      <div class="cmp">
+        <div class="cmp-row">
+          <div class="cmp-l">With Advanta<small>Grain at <span class="stdlbl">14</span>% moisture</small></div>
+          <div class="cmp-w"><span id="with-q">—</span> qtl · <span id="with-m">—</span> Mann</div>
+          <div class="cmp-i" id="with-inc">—</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-l">Without Advanta<small>Farmer average</small></div>
+          <div class="cmp-w"><span id="wo-q">—</span> qtl · <span id="wo-m">—</span> Mann</div>
+          <div class="cmp-i" id="wo-inc">—</div>
+        </div>
+        <div class="cmp-row gain">
+          <div class="cmp-l">Income gain<small>With minus without</small></div>
+          <div class="cmp-w">per acre</div>
+          <div class="cmp-i" id="gain">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-save">
+      <h2 id="h-save">Save this plot</h2>
+      <button type="button" class="btn" id="save">Save record</button>
+      <p class="note" id="save-msg" role="status"></p>
+    </section>
+
+    <details>
+      <summary>Settings</summary>
+      <div class="full">
+        <label for="method">Moisture calculation</label>
+        <select id="method">
+          <option value="simple">Simple: deduct the difference (25% − 14% = 11% off)</option>
+          <option value="dm">Accurate: dry matter, × (100 − moisture) ÷ (100 − standard)</option>
+        </select>
+      </div>
+      <div class="full">
+        <label for="std">Standard moisture % (price is quoted at this level)</label>
+        <input id="std" type="number" inputmode="decimal" min="1" max="99" step="any">
+      </div>
+      <p class="foot full">Plot to acre factor is fixed at 40. Quintal = 100 kg. Mann = 20 kg.</p>
+    </details>
+  </div>
+
+  <div class="view" id="view-saved" hidden>
+    <p class="note" id="store-warn" hidden>This browser is blocking storage, so records are kept only until the page closes. Export them before leaving.</p>
+
+    <section class="card" id="avg" aria-labelledby="h-avg">
+      <h2 id="h-avg">Average of <span id="avg-n">0</span> records</h2>
+      <div class="rec-s">
+        <div><span class="k">Plants / acre</span><span class="v" id="avg-p">—</span></div>
+        <div><span class="k">Grain qtl / acre</span><span class="v" id="avg-g">—</span></div>
+        <div><span class="k">Shelling</span><span class="v" id="avg-s">—</span></div>
+        <div><span class="k">Income gain</span><span class="v" id="avg-i">—</span></div>
+      </div>
+    </section>
+
+    <section class="card" id="saved-tools" aria-labelledby="h-exp">
+      <h2 id="h-exp">Export</h2>
+      <div class="btnrow">
+        <button type="button" class="btn sm" id="dl">Download CSV</button>
+        <button type="button" class="btn ghost sm" id="copy">Copy CSV</button>
+        <button type="button" class="btn ghost sm" id="share" hidden>Share CSV</button>
+      </div>
+      <textarea class="csv" id="csv" readonly hidden aria-label="CSV text"></textarea>
+      <p class="note" id="exp-msg" role="status"></p>
+      <p class="note">Records are stored on this phone only. Export to keep a backup or to view them in Excel.</p>
+    </section>
+
+    <p class="empty" id="saved-empty">No records yet. Fill in the calculator and tap Save record.</p>
+    <div class="recs" id="rec-list"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var FACTOR = 40;
+  var SKEY = 'dkdpkp-v2', RKEY = 'dkdpkp-records-v2';
+  var DEF = { ppr: '', rows: '', cob: [], grain: [], moist: '', price: '', unit: 'qtl', baseline: '', std: '14', method: 'simple', label: '', village: '', lat: '', lon: '', acc: '', recId: null };
+  var INPUTS = ['ppr', 'rows', 'moist', 'price', 'baseline', 'std', 'label', 'village', 'lat', 'lon'];
+  var SELECTS = ['unit', 'method'];
+  var storeOk = true;
+  try { localStorage.setItem('dkdpkp-t', '1'); localStorage.removeItem('dkdpkp-t'); } catch (e) { storeOk = false; }
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  var S = load();
+  var R = loadRecords();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(SKEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        var s = Object.assign(clone(DEF), o);
+        s.cob = Array.isArray(o.cob) ? o.cob.filter(isFinite) : [];
+        s.grain = Array.isArray(o.grain) ? o.grain.filter(isFinite) : [];
+        return s;
+      }
+    } catch (e) {}
+    return clone(DEF);
+  }
+  function save() { try { localStorage.setItem(SKEY, JSON.stringify(S)); } catch (e) {} }
+  function loadRecords() {
+    try {
+      var r = JSON.parse(localStorage.getItem(RKEY) || '[]');
+      return Array.isArray(r) ? r.filter(function (x) { return x && x.id && x.s && Array.isArray(x.s.cob) && Array.isArray(x.s.grain); }) : [];
+    } catch (e) { return []; }
+  }
+  function saveRecords() { try { localStorage.setItem(RKEY, JSON.stringify(R)); return true; } catch (e) { return false; } }
+
+  // BEGIN compute
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : null; }
+  function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
+  function compute(S) {
+    var f = 40;
+    var std = num(S.std); if (std == null || std <= 0 || std >= 100) std = 14;
+    var r = { factor: f, std: std };
+    var ppr = num(S.ppr), rows = num(S.rows);
+    r.plantsPlot = (ppr != null && rows != null) ? ppr * rows : null;
+    r.plantsAcre = r.plantsPlot == null ? null : r.plantsPlot * f;
+    r.cobPlot = sum(S.cob); r.grainPlot = sum(S.grain);
+    r.cobAcre = S.cob.length ? r.cobPlot * f : null;
+    r.grainAcre = S.grain.length ? r.grainPlot * f : null;
+    r.shelling = (r.cobPlot > 0 && r.grainPlot > 0) ? r.grainPlot / r.cobPlot * 100 : null;
+    var m = num(S.moist);
+    r.m = m;
+    r.moistOk = (m != null && m >= 0 && m < 100);
+    if (r.grainAcre != null && r.moistOk) {
+      r.adjKg = S.method === 'dm' ? r.grainAcre * (100 - m) / (100 - std) : r.grainAcre * (1 - (m - std) / 100);
+    } else { r.adjKg = null; }
+    var div = { kg: 1, qtl: 100, mann: 20 }[S.unit] || 100;
+    var p = num(S.price);
+    r.pricePerKg = (p != null && p >= 0) ? p / div : null;
+    var b = num(S.baseline);
+    r.baseKg = (b != null && b >= 0) ? b * 100 : null;
+    r.withInc = (r.adjKg != null && r.pricePerKg != null) ? r.adjKg * r.pricePerKg : null;
+    r.withoutInc = (r.baseKg != null && r.pricePerKg != null) ? r.baseKg * r.pricePerKg : null;
+    r.gain = (r.withInc != null && r.withoutInc != null) ? r.withInc - r.withoutInc : null;
+    return r;
+  }
+  // END compute
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(n, min, max) {
+    return n == null ? '—' : n.toLocaleString('en-IN', { minimumFractionDigits: min, maximumFractionDigits: max });
+  }
+  function inr(n) {
+    if (n == null) return '—';
+    var s = '₹' + Math.abs(Math.round(n)).toLocaleString('en-IN');
+    return n < -0.5 ? '−' + s : s;
+  }
+  function setTriple(id, kg) {
+    $(id + '-kg').textContent = fmt(kg, 1, 1);
+    $(id + '-q').textContent = fmt(kg == null ? null : kg / 100, 2, 2);
+    $(id + '-m').textContent = fmt(kg == null ? null : kg / 20, 1, 1);
+  }
+  function cell(t, cls) { var d = document.createElement('span'); if (cls) d.className = cls; d.textContent = t; return d; }
+  function dstr(ts) { return new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); }
+  function dcsv(ts) {
+    var d = new Date(ts), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function renderList(key) {
+    var ul = $(key + '-list');
+    ul.textContent = '';
+    var arr = S[key];
+    if (!arr.length) return;
+    var hd = document.createElement('li');
+    hd.className = 'hd';
+    hd.append(cell('Bag'), cell('Weight (kg)'), cell('Running total', 'run'), cell(''));
+    ul.appendChild(hd);
+    var run = 0;
+    arr.forEach(function (w, i) {
+      run += w;
+      var li = document.createElement('li');
+      li.append(cell('#' + (i + 1)), cell(fmt(w, 0, 2)), cell(fmt(run, 0, 2), 'run'));
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'rm'; b.textContent = '×';
+      b.setAttribute('aria-label', 'Remove entry ' + (i + 1));
+      b.addEventListener('click', function () { S[key].splice(i, 1); edit(); });
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  function addWeight(key) {
+    var inp = $(key + '-in');
+    var w = num(inp.value);
+    if (w == null || w <= 0) { inp.focus(); return; }
+    S[key].push(w);
+    inp.value = '';
+    inp.focus();
+    edit();
+  }
+
+  function update() {
+    var r = compute(S);
+    renderList('cob'); renderList('grain');
+    document.querySelectorAll('.stdlbl').forEach(function (e) { e.textContent = fmt(r.std, 0, 1); });
+
+    $('plants-plot').textContent = fmt(r.plantsPlot, 0, 0);
+    $('plants-acre').textContent = fmt(r.plantsAcre, 0, 0);
+
+    $('cob-plot').textContent = S.cob.length ? fmt(r.cobPlot, 0, 2) + ' kg' : '—';
+    $('grain-plot').textContent = S.grain.length ? fmt(r.grainPlot, 0, 2) + ' kg' : '—';
+    setTriple('cob-a', r.cobAcre);
+    setTriple('grain-a', r.grainAcre);
+
+    $('shelling').textContent = r.shelling == null ? '—' : fmt(r.shelling, 1, 1) + ' %';
+    $('shell-warn').hidden = !(r.shelling != null && r.shelling > 100);
+
+    setTriple('adj', r.adjKg);
+    var note = '';
+    if (r.grainAcre == null) note = 'Add grain weights above.';
+    else if (!r.moistOk) note = 'Enter the current moisture %.';
+    else if (S.method === 'dm') note = 'Accurate method: weight × (100 − ' + fmt(r.m, 0, 1) + ') ÷ (100 − ' + fmt(r.std, 0, 1) + ').';
+    else {
+      var d = r.m - r.std;
+      note = 'Simple method: ' + (d >= 0 ? 'deducts ' : 'adds ') + fmt(Math.abs(d), 0, 1) + '% (' + fmt(r.m, 0, 1) + ' − ' + fmt(r.std, 0, 1) + ') ' + (d >= 0 ? 'from' : 'to') + ' the weight.';
+    }
+    $('adj-note').textContent = note;
+
+    $('price-note').textContent = r.pricePerKg == null ? '' : 'Works out to ₹' + fmt(r.pricePerKg, 2, 2) + ' per kg.';
+
+    $('with-q').textContent = fmt(r.adjKg == null ? null : r.adjKg / 100, 2, 2);
+    $('with-m').textContent = fmt(r.adjKg == null ? null : r.adjKg / 20, 1, 1);
+    $('wo-q').textContent = fmt(r.baseKg == null ? null : r.baseKg / 100, 2, 2);
+    $('wo-m').textContent = fmt(r.baseKg == null ? null : r.baseKg / 20, 1, 1);
+    $('with-inc').textContent = inr(r.withInc);
+    $('wo-inc').textContent = inr(r.withoutInc);
+    $('gain').textContent = inr(r.gain);
+    $('gain').classList.toggle('neg', r.gain != null && r.gain < 0);
+    $('save').textContent = S.recId ? 'Update record' : 'Save record';
+    $('loc-msg').textContent = locNote || (S.acc ? 'GPS accuracy about ' + S.acc + ' m.' : '');
+    if (!$('loc').disabled) $('loc').textContent = S.lat ? 'Capture location again' : 'Capture location';
+    save();
+  }
+  var locNote = '';
+  function edit() { $('save-msg').textContent = ''; locNote = ''; update(); }
+
+  function sync() {
+    INPUTS.forEach(function (k) { $(k).value = S[k]; });
+    SELECTS.forEach(function (k) { $(k).value = S[k]; });
+  }
+
+  /* ---------- records ---------- */
+  function saveRecord() {
+    var r = compute(S);
+    if (r.plantsAcre == null && !S.cob.length && !S.grain.length) { $('save-msg').textContent = 'Nothing to save yet.'; return; }
+    var snap = clone(S); delete snap.recId;
+    var now = new Date().toISOString();
+    var rec = null;
+    if (S.recId) R.forEach(function (x) { if (x.id === S.recId) rec = x; });
+    if (rec) { rec.s = snap; rec.label = S.label.trim(); rec.updated = now; }
+    else {
+      rec = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: now, label: S.label.trim(), s: snap };
+      R.unshift(rec);
+      S.recId = rec.id;
+    }
+    var ok = saveRecords();
+    update();
+    renderSaved();
+    $('save-msg').textContent = ok ? 'Saved ' + dstr(now) + '. Tap Clear all to start the next plot.' : 'This browser would not store the record. Use Export in the Saved tab.';
+  }
+
+  function avg(a) { return a.length ? sum(a) / a.length : null; }
+  function renderSaved() {
+    $('cnt').textContent = R.length;
+    $('store-warn').hidden = storeOk;
+    $('saved-empty').hidden = R.length > 0;
+    $('saved-tools').hidden = R.length === 0;
+    $('avg').hidden = R.length === 0;
+    var list = $('rec-list');
+    list.textContent = '';
+    var P = [], G = [], SH = [], GN = [];
+    R.forEach(function (x) {
+      var r = compute(x.s);
+      if (r.plantsAcre != null) P.push(r.plantsAcre);
+      if (r.grainAcre != null) G.push(r.grainAcre / 100);
+      if (r.shelling != null) SH.push(r.shelling);
+      if (r.gain != null) GN.push(r.gain);
+
+      var card = document.createElement('article'); card.className = 'rec';
+      var h = document.createElement('div'); h.className = 'rec-h';
+      h.append(cell(x.s.village || x.label || 'No village', 'rec-t'), cell((x.s.village && x.label ? x.label + ' · ' : '') + dstr(x.ts), 'rec-d'));
+      var s = document.createElement('div'); s.className = 'rec-s';
+      [['Plants / acre', fmt(r.plantsAcre, 0, 0)],
+       ['Grain qtl / acre', fmt(r.grainAcre == null ? null : r.grainAcre / 100, 2, 2)],
+       ['Shelling', r.shelling == null ? '—' : fmt(r.shelling, 1, 1) + ' %'],
+       ['Income gain', inr(r.gain)]].forEach(function (p) {
+        var c = document.createElement('div'); c.append(cell(p[0], 'k'), cell(p[1], 'v')); s.appendChild(c);
+      });
+      var a = document.createElement('div'); a.className = 'btnrow';
+      var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = 'Open';
+      open.addEventListener('click', function () {
+        S = Object.assign(clone(DEF), clone(x.s), { recId: x.id });
+        sync(); $('save-msg').textContent = ''; update(); show('calc');
+      });
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'btn ghost sm'; del.textContent = 'Delete';
+      var t = null;
+      del.addEventListener('click', function () {
+        if (!t) { del.textContent = 'Tap again to delete'; t = setTimeout(function () { t = null; del.textContent = 'Delete'; }, 3000); return; }
+        clearTimeout(t);
+        R = R.filter(function (y) { return y.id !== x.id; });
+        if (S.recId === x.id) S.recId = null;
+        saveRecords(); update(); renderSaved();
+      });
+      a.append(open, del);
+      var la = num(x.s.lat), lo = num(x.s.lon);
+      if (la != null && lo != null) {
+        var ml = document.createElement('a'); ml.className = 'link';
+        ml.href = 'https://www.google.com/maps?q=' + la + ',' + lo; ml.target = '_blank'; ml.rel = 'noopener';
+        ml.textContent = 'Map: ' + la.toFixed(5) + ', ' + lo.toFixed(5);
+        a.append(ml);
+      }
+      card.append(h, s, a);
+      list.appendChild(card);
+    });
+    $('avg-n').textContent = R.length;
+    $('avg-p').textContent = fmt(avg(P), 0, 0);
+    $('avg-g').textContent = fmt(avg(G), 2, 2);
+    $('avg-s').textContent = SH.length ? fmt(avg(SH), 1, 1) + ' %' : '—';
+    $('avg-i').textContent = inr(avg(GN));
+  }
+
+  /* ---------- CSV export ---------- */
+  function rn(n, d) { if (n == null) return ''; var k = Math.pow(10, d); return Math.round(n * k) / k; }
+  function esc(v, isText) {
+    if (v == null) return '';
+    v = String(v);
+    if (isText && /^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    if (/[",\n\r]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  var COLS = [
+    ['Date', function (x) { return dcsv(x.ts); }, 1],
+    ['Village', function (x) { return x.s.village || ''; }, 1],
+    ['Farmer name', function (x) { return x.label; }, 1],
+    ['Latitude', function (x) { return num(x.s.lat); }],
+    ['Longitude', function (x) { return num(x.s.lon); }],
+    ['GPS accuracy m', function (x) { return num(x.s.acc); }],
+    ['Plants per row', function (x) { return num(x.s.ppr); }],
+    ['Rows', function (x) { return num(x.s.rows); }],
+    ['Plants per acre', function (x, r) { return r.plantsAcre; }],
+    ['Cob bags kg (plot)', function (x) { return x.s.cob.join(' + '); }, 1],
+    ['Cob total kg (plot)', function (x, r) { return x.s.cob.length ? rn(r.cobPlot, 2) : ''; }],
+    ['Cob kg per acre', function (x, r) { return rn(r.cobAcre, 1); }],
+    ['Grain bags kg (plot)', function (x) { return x.s.grain.join(' + '); }, 1],
+    ['Grain total kg (plot)', function (x, r) { return x.s.grain.length ? rn(r.grainPlot, 2) : ''; }],
+    ['Grain kg per acre', function (x, r) { return rn(r.grainAcre, 1); }],
+    ['Grain qtl per acre', function (x, r) { return rn(r.grainAcre == null ? null : r.grainAcre / 100, 2); }],
+    ['Grain Mann per acre', function (x, r) { return rn(r.grainAcre == null ? null : r.grainAcre / 20, 1); }],
+    ['Shelling %', function (x, r) { return rn(r.shelling, 1); }],
+    ['Current moisture %', function (x) { return num(x.s.moist); }],
+    ['Standard moisture %', function (x, r) { return r.std; }],
+    ['Moisture method', function (x) { return x.s.method === 'dm' ? 'Accurate' : 'Simple'; }, 1],
+    ['Adjusted kg per acre', function (x, r) { return rn(r.adjKg, 1); }],
+    ['Adjusted qtl per acre', function (x, r) { return rn(r.adjKg == null ? null : r.adjKg / 100, 2); }],
+    ['Adjusted Mann per acre', function (x, r) { return rn(r.adjKg == null ? null : r.adjKg / 20, 1); }],
+    ['Price', function (x) { return num(x.s.price); }],
+    ['Price per', function (x) { return x.s.unit === 'kg' ? 'kg' : x.s.unit === 'mann' ? 'Mann' : 'Quintal'; }, 1],
+    ['Without Advanta qtl per acre', function (x) { return num(x.s.baseline); }],
+    ['Income with Advanta', function (x, r) { return rn(r.withInc, 0); }],
+    ['Income without Advanta', function (x, r) { return rn(r.withoutInc, 0); }],
+    ['Income gain', function (x, r) { return rn(r.gain, 0); }]
+  ];
+  function buildCsv() {
+    var lines = [COLS.map(function (c) { return esc(c[0], true); }).join(',')];
+    R.slice().reverse().forEach(function (x) {
+      var r = compute(x.s);
+      lines.push(COLS.map(function (c) { return esc(c[1](x, r), !!c[2]); }).join(','));
+    });
+    return lines.join('\r\n');
+  }
+  function expMsg(t) { $('exp-msg').textContent = t; }
+  function stamp() { return dcsv(new Date().toISOString()).replace(/[: ]/g, '-'); }
+  function downloadCsv() {
+    var csv = buildCsv();
+    try {
+      var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'dkdpkp-records-' + stamp() + '.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      expMsg('Download started. If nothing downloads, use Copy CSV.');
+    } catch (e) { expMsg('Download is not available here. Use Copy CSV.'); }
+  }
+  function copyCsv() {
+    var csv = buildCsv(), ta = $('csv');
+    function fail() { ta.hidden = false; ta.value = csv; ta.focus(); ta.select(); expMsg('Copy was blocked. The text is selected below, copy it manually.'); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(csv).then(function () { expMsg('Copied. Paste into Excel, Sheets or WhatsApp.'); }, fail);
+      } else fail();
+    } catch (e) { fail(); }
+  }
+  function shareCsv() {
+    try {
+      var f = new File(['﻿' + buildCsv()], 'dkdpkp-records.csv', { type: 'text/csv' });
+      navigator.share({ files: [f], title: 'DKDPKP records' }).catch(function () {});
+    } catch (e) { expMsg('Sharing is not available here.'); }
+  }
+  try {
+    var probe = new File(['x'], 'a.csv', { type: 'text/csv' });
+    if (navigator.canShare && navigator.canShare({ files: [probe] })) $('share').hidden = false;
+  } catch (e) {}
+
+  /* ---------- location ---------- */
+  function getLoc() {
+    var b = $('loc');
+    if (!navigator.geolocation) { locNote = 'Location is not available on this device.'; $('loc-msg').textContent = locNote; return; }
+    b.disabled = true; b.textContent = 'Getting location...';
+    locNote = 'Stay outdoors with a clear sky. This can take up to 30 seconds.';
+    $('loc-msg').textContent = locNote;
+    navigator.geolocation.getCurrentPosition(function (p) {
+      b.disabled = false;
+      S.lat = p.coords.latitude.toFixed(6); S.lon = p.coords.longitude.toFixed(6); S.acc = String(Math.round(p.coords.accuracy));
+      $('lat').value = S.lat; $('lon').value = S.lon;
+      edit();
+    }, function (err) {
+      b.disabled = false;
+      locNote = err && err.code === 1 ? 'Location is blocked. Allow location for this app in the browser settings, then try again.'
+        : err && err.code === 3 ? 'Timed out. Move outdoors and try again.'
+        : 'Location is not available right now. Try outdoors, or type the coordinates.';
+      update();
+      $('loc-msg').textContent = locNote;
+    }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 });
+  }
+
+  /* ---------- tabs ---------- */
+  function show(v) {
+    $('view-calc').hidden = v !== 'calc';
+    $('view-saved').hidden = v !== 'saved';
+    $('tab-calc').setAttribute('aria-selected', v === 'calc');
+    $('tab-saved').setAttribute('aria-selected', v === 'saved');
+    if (v === 'saved') renderSaved();
+    window.scrollTo(0, 0);
+  }
+  $('tab-calc').addEventListener('click', function () { show('calc'); });
+  $('tab-saved').addEventListener('click', function () { show('saved'); });
+
+  /* ---------- wiring ---------- */
+  document.querySelectorAll('.triple').forEach(function (h) {
+    var id = h.getAttribute('data-id');
+    h.innerHTML = '<div><span class="k">kg</span><span class="v" id="' + id + '-kg">—</span></div>' +
+      '<div><span class="k">Quintal</span><span class="v" id="' + id + '-q">—</span></div>' +
+      '<div><span class="k">Mann</span><span class="v" id="' + id + '-m">—</span></div>';
+  });
+  INPUTS.forEach(function (k) { $(k).addEventListener('input', function () { S[k] = this.value; if (k === 'lat' || k === 'lon') S.acc = ''; edit(); }); });
+  SELECTS.forEach(function (k) { $(k).addEventListener('change', function () { S[k] = this.value; edit(); }); });
+  ['cob', 'grain'].forEach(function (k) {
+    $(k + '-add').addEventListener('click', function () { addWeight(k); });
+    $(k + '-in').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWeight(k); } });
+  });
+  $('save').addEventListener('click', saveRecord);
+  $('loc').addEventListener('click', getLoc);
+  $('dl').addEventListener('click', downloadCsv);
+  $('copy').addEventListener('click', copyCsv);
+  $('share').addEventListener('click', shareCsv);
+
+  $('example').addEventListener('click', function () {
+    S.ppr = '25'; S.rows = '30'; S.cob = [16, 15.25]; S.grain = [12.5, 12.5];
+    S.moist = '25'; S.price = '2400'; S.unit = 'qtl'; S.baseline = '5'; S.label = 'Example farmer'; S.village = 'Example village'; S.recId = null;
+    sync(); edit();
+  });
+
+  var clr = $('clear'), timer = null;
+  clr.addEventListener('click', function () {
+    if (!timer) {
+      clr.textContent = 'Tap again to clear';
+      timer = setTimeout(function () { timer = null; clr.textContent = 'Clear all'; }, 3000);
+      return;
+    }
+    clearTimeout(timer); timer = null; clr.textContent = 'Clear all';
+    var keep = { std: S.std, method: S.method, village: S.village };
+    S = Object.assign(clone(DEF), keep);
+    sync(); edit();
+  });
+
+  sync();
+  update();
+  renderSaved();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", function () { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} });
+}
+</script>
+</html>
